@@ -1,0 +1,24 @@
+{
+    "name": "com.maxfelker.simplewebservice",
+    "version": "0.1.0",
+    "displayName": "Simple WebService",
+    "description": "A simple HTTP request and response wrapper for interacting with RESTful JSON APIs.",
+    "unity": "2022.3",
+    "documentationUrl": "https://github.com/maxfelker/SimpleWebService",
+    "changelogUrl": "https://github.com/maxfelker/SimpleWebService/releases",
+    "licensesUrl": "https://github.com/maxfelker/SimpleWebService/blob/main/LICENSE.md",
+    "dependencies": {},
+   "keywords": [
+      "RESTful",
+      "API",
+      "JSON",
+      "HTTP",
+      "Web"
+    ],
+    "author": {
+      "name": "Max Felker",
+      "email": "tech@maxfelker.com",
+      "url": "https://maxfelker.com"
+    }
+  }
+  
