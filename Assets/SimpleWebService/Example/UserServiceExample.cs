@@ -22,10 +22,7 @@ public class UserServiceExample : SimpleWebService
     // Get a list of todos when the script initializes 
     void Start()
     {
-        //GetUser();
-        //AddUser();
-        //PatchUser();
-        DeleteUser();
+        GetUser();
     }
 
     // Make a request to the API to get specific User by ID
@@ -70,7 +67,5 @@ public class UserServiceExample : SimpleWebService
         Debug.Log(response);
     }
 
-
-    
 
 }

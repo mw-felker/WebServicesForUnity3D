@@ -1,9 +1,10 @@
 ﻿/*
  * Simple Web Service
  * 
- * A simple HTTP tool for Unity3D that interacts with JSON APIs via UnityWebRequest
+ * A simple HTTP request and response wrapper for projects that are interacting with RESTful JSON APIs.
+ * Built on top of UnityWebRequest and SimpleJSON.
  * 
- * https://github.com/mw-felker/SimpleWebService
+ * https://github.com/maxfelker/SimpleWebService
  * 
 */
 
@@ -17,20 +18,30 @@ using SimpleJSON;
 public class SimpleWebService : MonoBehaviour
 {
 
-  // Set up our call back delegation, passing back a JSONNode obkect
+  public enum HttpMethod
+  {
+      GET,
+      POST,
+      PUT,
+      DELETE,
+      PATCH 
+  }
+
   protected delegate void CallBack(JSONNode response);
 
-  // Make a GET request inside a Coroutine and pass the callback function upon completion 
-  protected void Get(string url, CallBack callback) => StartCoroutine(
-    StartRequest(UnityWebRequest.Get(url), callback)
-  );
+  protected void Get(string url, CallBack callback) 
+  {
+    UnityWebRequest request = GenerateUnityWebRequest(url, HttpMethod.GET);
+    StartCoroutine(SendRequest(request, callback));
+  }
 
 	protected void Post(string url, string json, CallBack callback)
   {
-    UnityWebRequest request = GenerateUnityWebRequest(url, "POST", json);
-    StartCoroutine(StartRequest(request, callback));
+    UnityWebRequest request = GenerateUnityWebRequest(url, HttpMethod.POST, json);
+    StartCoroutine(SendRequest(request, callback));
   }
 	
+  // Send a form post instead of just raw JSON POST above
 	protected void PostForm(string url, Dictionary<string, string> payload, CallBack callback)
   {
 		WWWForm formData = new WWWForm();
@@ -39,61 +50,80 @@ public class SimpleWebService : MonoBehaviour
       formData.AddField(data.Key, data.Value);
     }
     UnityWebRequest request = UnityWebRequest.Post(url, formData);
-    StartCoroutine(StartRequest(request, callback));
+    StartCoroutine(SendRequest(request, callback));
   }
 
-	// Makes a PATCH request 
 	protected void Patch(string url, string json, CallBack callback)
   {
-    UnityWebRequest request = GenerateUnityWebRequest(url, "PATCH", json);
-    StartCoroutine(StartRequest(request, callback));
+    UnityWebRequest request = GenerateUnityWebRequest(url, HttpMethod.PATCH, json);
+    StartCoroutine(SendRequest(request, callback));
   }
 
-	// Makes a PUT request
 	protected void Put(string url, string json, CallBack callback)
   {
-    UnityWebRequest request = GenerateUnityWebRequest(url, "PUT", json);
-    StartCoroutine(StartRequest(request, callback));
+    UnityWebRequest request = GenerateUnityWebRequest(url, HttpMethod.PUT, json);
+    StartCoroutine(SendRequest(request, callback));
   }
 
-	protected void Delete(string url, CallBack callback) => StartCoroutine(
-    StartRequest(UnityWebRequest.Delete(url), callback)
-  );
+	protected void Delete(string url, CallBack callback) 
+  {
+    UnityWebRequest request = GenerateUnityWebRequest(url, HttpMethod.DELETE);
+    StartCoroutine(SendRequest(request, callback));
+  }
 
 	// Generates a UnityWebRequest with a configuration HTTP method and sets the request type to JSON
-	private UnityWebRequest GenerateUnityWebRequest(string url, string httpMethod, string json) 
-	{
-		// TODO: Make HTTP method an enum
-		UnityWebRequest request = new UnityWebRequest(url, httpMethod);
-		byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(json);
-    request.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
-    request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
-    request.SetRequestHeader("Content-Type", "application/json");
-    return request;
-	}
-
-  // Makes the HTTP request, parse the JSON response and fire the callback 
-  private IEnumerator StartRequest(UnityWebRequest request, CallBack callback)
+	private UnityWebRequest GenerateUnityWebRequest(string url, HttpMethod httpMethod, string json = null) 
   {
-    using (request)
-    {
-
-      yield return request.SendWebRequest();
-
-      // if we have an error, log it
-      if (request.isNetworkError || request.isHttpError)
+      UnityWebRequest request;
+ 
+      switch (httpMethod)
       {
-        Debug.LogError(request.error);
+          case HttpMethod.GET:
+              request = UnityWebRequest.Get(url);
+              break;
+          case HttpMethod.POST:
+              request = UnityWebRequest.PostWwwForm(url, json);
+              break;
+          case HttpMethod.PUT:
+              request = UnityWebRequest.Put(url, json);
+              break;
+          case HttpMethod.DELETE:
+              request = UnityWebRequest.Delete(url);
+              break;
+          case HttpMethod.PATCH:
+              // PATCH is not supported by UnityWebRequest, so we have to use a workaround
+              request = new UnityWebRequest(url, "PATCH");
+              byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(json);
+              request.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
+              request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+              break;
+          default:
+              throw new ArgumentException("Invalid HTTP method");
       }
-      else // parse the JSON response and fire call back 
+      SetHeaders(request);
+      return request;
+  }
+
+  private void SetHeaders(UnityWebRequest request)
+  {
+      request.SetRequestHeader("Content-Type", "application/json");
+  }
+
+  private IEnumerator SendRequest(UnityWebRequest request, CallBack callback)
+  {
+    yield return request.SendWebRequest();
+
+    if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
+    {
+      Debug.LogError(request.error);
+    }
+    else
+    {
+      JSONNode responseJSON = JSON.Parse(request.downloadHandler.text);
+
+      if (callback != null)
       {
-
-				JSONNode responseJSON = JSON.Parse(request.downloadHandler.text);
-
-        if (callback != null)
-        {
-          callback(responseJSON);
-        }
+        callback(responseJSON);
       }
     }
   }
