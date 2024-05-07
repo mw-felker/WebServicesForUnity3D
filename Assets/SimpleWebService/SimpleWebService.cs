@@ -1,7 +1,8 @@
 ﻿/*
  * Simple Web Service
  * 
- * A simple HTTP request and response wrapper for projects that are interacting with RESTful JSON APIs.
+ * A simple HTTP request and response wrapper for interacting with RESTful JSON APIs. 
+ * 
  * Built on top of UnityWebRequest and SimpleJSON.
  * 
  * https://github.com/maxfelker/SimpleWebService
